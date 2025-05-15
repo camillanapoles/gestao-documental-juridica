@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard do Advogado - Sistema de Gestão Documental Jurídica{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h3">Painel do Advogado</h1>
+        <p class="text-muted">Bem-vindo, Dr(a). {{ current_user.name }}. Gerencie seus casos e documentos.</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('lawyer.create_case') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Novo Caso
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Resumo e Estatísticas -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Resumo</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0 bg-primary-subtle p-3 rounded">
+                        <i class="bi bi-briefcase text-primary fs-4"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-0">Casos Ativos</h6>
+                        <h4 class="mb-0">{{ total_cases }}</h4>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0 bg-info-subtle p-3 rounded">
+                        <i class="bi bi-file-earmark-text text-info fs-4"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-0">Total de Documentos</h6>
+                        <h4 class="mb-0">{{ total_documents }}</h4>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-warning-subtle p-3 rounded">
+                        <i class="bi bi-hourglass-split text-warning fs-4"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-0">Aguardando Análise</h6>
+                        <h4 class="mb-0">{{ pending_review|length }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Documentos Aguardando Análise -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Documentos Aguardando Análise</h5>
+                <span class="badge bg-light text-dark">{{ pending_review|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if pending_review %}
+                    <div class="list-group">
+                        {% for document in pending_review %}
+                            <a href="{{ url_for('lawyer.view_document', document_id=document.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ document.name }}</h6>
+                                    <small>{{ document.updated_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                <div class="d-flex w-100 justify-content-between">
+                                    <small class="text-muted">
+                                        <span class="fw-bold">Caso:</span> {{ document.case.title }} | 
+                                        <span class="fw-bold">Cliente:</span> {{ document.case.client.name }}
+                                    </small>
+                                    <span class="badge bg-warning rounded-pill">
+                                        {{ document.get_status_display() }}
+                                    </span>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                        <p class="mt-2">Não há documentos aguardando análise no momento.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Casos Recentes -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Casos Ativos</h5>
+                <a href="{{ url_for('lawyer.cases') }}" class="btn btn-sm btn-light">Ver Todos</a>
+            </div>
+            <div class="card-body">
+                {% if cases %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Caso</th>
+                                    <th>Cliente</th>
+                                    <th>Data de Criação</th>
+                                    <th>Progresso</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for case in cases %}
+                                    <tr>
+                                        <td>{{ case.title }}</td>
+                                        <td>{{ case.client.name }}</td>
+                                        <td>{{ case.created_at.strftime('%d/%m/%Y') }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar" role="progressbar" style="width: {{ case.get_progress() }}%;" 
+                                                     aria-valuenow="{{ case.get_progress() }}" aria-valuemin="0" aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ case.get_progress() }}%</small>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('lawyer.case_detail', case_id=case.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-eye"></i> Ver
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-folder-x text-muted fs-1"></i>
+                        <p class="mt-2">Você não possui casos ativos no momento.</p>
+                        <a href="{{ url_for('lawyer.create_case') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Criar Novo Caso
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard do Cliente - Sistema de Gestão Documental Jurídica{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h3">Meu Painel</h1>
+        <p class="text-muted">Bem-vindo, {{ current_user.name }}. Aqui você pode gerenciar seus documentos.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Resumo e Estatísticas -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Resumo</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0 bg-primary-subtle p-3 rounded">
+                        <i class="bi bi-folder text-primary fs-4"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-0">Casos Ativos</h6>
+                        <h4 class="mb-0">{{ cases|length }}</h4>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0 bg-warning-subtle p-3 rounded">
+                        <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-0">Documentos Pendentes</h6>
+                        <h4 class="mb-0">{{ pending_documents|length }}</h4>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-success-subtle p-3 rounded">
+                        <i class="bi bi-check-circle text-success fs-4"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-0">Documentos Aprovados</h6>
+                        <h4 class="mb-0">{{ approved_documents|default(0) }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Documentos Pendentes -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Documentos Pendentes</h5>
+                <span class="badge bg-light text-dark">{{ pending_documents|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if pending_documents %}
+                    <div class="list-group">
+                        {% for document in pending_documents %}
+                            <a href="{{ url_for('client.upload_document', document_id=document.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ document.name }}</h6>
+                                    <small class="text-muted">{{ document.case.title }}</small>
+                                </div>
+                                <span class="badge bg-{{ 'warning' if document.status.name == 'PENDING' else 'danger' }} rounded-pill">
+                                    {{ document.get_status_display() }}
+                                </span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                        <p class="mt-2">Não há documentos pendentes no momento.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Meus Casos -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Meus Casos</h5>
+            </div>
+            <div class="card-body">
+                {% if cases %}
+                    <div class="list-group">
+                        {% for case in cases %}
+                            <a href="{{ url_for('client.checklist', case_id=case.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ case.title }}</h6>
+                                    <small>{{ case.created_at.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <small class="text-muted">Advogado: {{ case.lawyer.name }}</small>
+                                    <div class="progress" style="width: 40%;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ case.get_progress() }}%;" 
+                                             aria-valuenow="{{ case.get_progress() }}" aria-valuemin="0" aria-valuemax="100">
+                                            {{ case.get_progress() }}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-folder-x text-muted fs-1"></i>
+                        <p class="mt-2">Você não possui casos ativos no momento.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Documentos Recentes -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Documentos Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_documents %}
+                    <div class="list-group">
+                        {% for document in recent_documents %}
+                            <a href="{{ url_for('client.view_document', document_id=document.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ document.name }}</h6>
+                                    <small>{{ document.updated_at.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                <div class="d-flex w-100 justify-content-between">
+                                    <small class="text-muted">{{ document.case.title }}</small>
+                                    <span class="badge bg-{{ 'success' if document.status.name == 'APPROVED' else 'primary' if document.status.name == 'REVIEWING' else 'warning' if document.status.name == 'SUBMITTED' else 'danger' }} rounded-pill">
+                                        {{ document.get_status_display() }}
+                                    </span>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-file-earmark-x text-muted fs-1"></i>
+                        <p class="mt-2">Nenhum documento enviado recentemente.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

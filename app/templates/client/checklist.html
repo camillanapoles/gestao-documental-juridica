@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Checklist de Documentos - Sistema de Gestão Documental Jurídica{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h3">Checklist de Documentos</h1>
+        <p class="text-muted">Caso: {{ case.title }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('client.dashboard') }}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Voltar ao Painel
+        </a>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Documentos Solicitados</h5>
+            <div>
+                <span class="badge bg-light text-dark">
+                    Progresso: {{ (documents|selectattr('status.name', 'in', ['APPROVED', 'SUBMITTED', 'REVIEWING'])|list|length / documents|length * 100)|int }}%
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="progress mb-4" style="height: 10px;">
+            <div class="progress-bar bg-success" role="progressbar" 
+                 style="width: {{ (documents|selectattr('status.name', 'equalto', 'APPROVED')|list|length / documents|length * 100)|int }}%;" 
+                 aria-valuenow="{{ (documents|selectattr('status.name', 'equalto', 'APPROVED')|list|length / documents|length * 100)|int }}" 
+                 aria-valuemin="0" aria-valuemax="100">
+            </div>
+            <div class="progress-bar bg-primary" role="progressbar" 
+                 style="width: {{ (documents|selectattr('status.name', 'equalto', 'REVIEWING')|list|length / documents|length * 100)|int }}%;" 
+                 aria-valuenow="{{ (documents|selectattr('status.name', 'equalto', 'REVIEWING')|list|length / documents|length * 100)|int }}" 
+                 aria-valuemin="0" aria-valuemax="100">
+            </div>
+            <div class="progress-bar bg-warning" role="progressbar" 
+                 style="width: {{ (documents|selectattr('status.name', 'equalto', 'SUBMITTED')|list|length / documents|length * 100)|int }}%;" 
+                 aria-valuenow="{{ (documents|selectattr('status.name', 'equalto', 'SUBMITTED')|list|length / documents|length * 100)|int }}" 
+                 aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        
+        <div class="list-group">
+            {% for document in documents %}
+                <div class="list-group-item list-group-item-action">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-1">{{ document.name }}</h5>
+                            {% if document.description %}
+                                <p class="mb-1 text-muted small">{{ document.description }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-{{ 'success' if document.status.name == 'APPROVED' else 'primary' if document.status.name == 'REVIEWING' else 'warning' if document.status.name == 'SUBMITTED' else 'danger' if document.status.name == 'REJECTED' or document.status.name == 'CORRECTION_REQUESTED' else 'secondary' }} rounded-pill">
+                                {{ document.get_status_display() }}
+                            </span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            {% if document.status.name == 'PENDING' or document.status.name == 'CORRECTION_REQUESTED' or document.status.name == 'REJECTED' %}
+                                <a href="{{ url_for('client.upload_document', document_id=document.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-upload"></i> Enviar
+                                </a>
+                            {% elif document.file_path %}
+                                <a href="{{ url_for('client.view_document', document_id=document.id) }}" class="btn btn-info btn-sm">
+                                    <i class="bi bi-eye"></i> Visualizar
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if documents|selectattr('status.name', 'in', ['SUBMITTED', 'REVIEWING', 'APPROVED'])|list|length > 0 %}
+<div class="card shadow">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Documentos Enviados</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Documento</th>
+                        <th>Data de Envio</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents|selectattr('status.name', 'in', ['SUBMITTED', 'REVIEWING', 'APPROVED'])|list %}
+                        <tr>
+                            <td>{{ document.name }}</td>
+                            <td>{{ document.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if document.status.name == 'APPROVED' else 'primary' if document.status.name == 'REVIEWING' else 'warning' }}">
+                                    {{ document.get_status_display() }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('client.view_document', document_id=document.id) }}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i> Visualizar
+                                </a>
+                                {% if document.status.name != 'APPROVED' %}
+                                    <a href="{{ url_for('client.upload_document', document_id=document.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-arrow-repeat"></i> Atualizar
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
