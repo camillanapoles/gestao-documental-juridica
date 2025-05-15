@@ -1,0 +1,62 @@
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install pytest pytest-flask
+        
+    - name: Test with pytest
+      run: |
+        pytest
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
+    
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/docjur-app
+        gcloud run deploy docjur-app \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/docjur-app \
+          --platform managed \
+          --region us-central1 \
+          --allow-unauthenticated
+    
+    - name: Get Service URL
+      id: get-url
+      run: |
+        SERVICE_URL=$(gcloud run services describe docjur-app --platform managed --region us-central1 --format 'value(status.url)')
+        echo "::set-output name=url::$SERVICE_URL"
+    
+    - name: Verify deployment
+      run: |
+        echo "Verifying deployment at ${{ steps.get-url.outputs.url }}"
+        curl -s ${{ steps.get-url.outputs.url }} | grep "DocJur"
