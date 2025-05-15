@@ -1,0 +1,20 @@
+runtime: python311
+entrypoint: gunicorn run:app
+
+env_variables:
+  SECRET_KEY: "producao_key_segura_2025"
+  FLASK_ENV: "production"
+  FLASK_APP: "run.py"
+
+handlers:
+- url: /static
+  static_dir: app/static
+  secure: always
+
+- url: /.*
+  script: auto
+  secure: always
+
+automatic_scaling:
+  min_instances: 1
+  max_instances: 5
